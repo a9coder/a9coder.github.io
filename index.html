@@ -71,6 +71,9 @@
                 if (response.ok) {
                     const quote = await response.json();
                     const ratio = Number(BigInt(quote.outAmounts[0]) * BigInt(1000) / BigInt(quote.inAmounts[0])) / 1000;
+
+                    // 更新页面标题
+                    document.title = `${ratio}`;
                     
                     const now = new Date().toLocaleString();
                     const logMessage = `${now}   ${ratio}`;
