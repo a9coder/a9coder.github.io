@@ -1,66 +1,104 @@
-<script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
 <html>
-<h1>查询POAP差集【地址2中有 地址1中没有的】</h1>
-<div>转账有风险 授权需谨慎 解除授权：<a href="https://revoke.cash/" target="_blank">revoke.cash/</a></div>
-<br>
-<div>
-    <input type="text" id="add1" value="" placeholder="地址1" style="width: 350px;">
-    <input type="button" id="btn2" value="互换">
-    <input type="text" id="add2" value="" placeholder="地址2" style="width: 350px;">
-    <input type="button" id="btn1" value="查询">
+<head>
+    <title>Price Monitor</title>
+    <style>
+        #output {
+            font-family: monospace;
+            background-color: #f5f5f5;
+            padding: 10px;
+            border: 1px solid #ccc;
+            height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .log-entry {
+            margin: 2px 0;
+            padding: 2px 0;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h2>价格监控</h2>
+    <div id="output"></div>
 
-</div>
-<div id="add">
-</div>
+    <script>
+        const quoteUrl = "https://api.odos.xyz/sor/quote/v2/zap";
+        const outputDiv = document.getElementById('output');
 
+        // 添加日志到显示区域
+        function addLog(message) {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry';
+            logEntry.textContent = message;
+            outputDiv.appendChild(logEntry);
+            // 自动滚动到底部
+            outputDiv.scrollTop = outputDiv.scrollHeight;
+        }
+
+        const quoteRequestBody = {
+            chainId: 56,
+            inputTokens: [
+                {
+                    tokenAddress: "0xf4c8e32eadec4bfe97e0f595add0f4450a863a11",
+                    amount: "1000000000000000000"
+                }
+            ],
+            outputTokens: [
+                {
+                    tokenAddress: "0xcdc3a010a3473c0c4b2cb03d8489d6ba387b83cd",
+                    proportion: 1
+                }
+            ],
+            slippageLimitPercent: 1,
+            userAddr: "0x9c148E15BCfb0a3020b84205eEb089c1a8110000",
+            referralCode: 0,
+            compact: true
+        };
+
+
+
+        async function checkPrice() {
+            try {
+                const response = await fetch(quoteUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(quoteRequestBody)
+                });
+
+                if (response.ok) {
+                    const quote = await response.json();
+                    const ratio = Number(BigInt(quote.outAmounts[0]) * BigInt(1000) / BigInt(quote.inAmounts[0])) / 1000;
+                    
+                    const now = new Date().toLocaleString();
+                    const logMessage = `${now}   ${ratio}`;
+                    
+                    // 同时输出到页面和控制台
+                    addLog(logMessage);
+                    console.log(logMessage);
+
+                    if (ratio <= 1.8) {
+                        const alertMessage = `the价格低于1.8倍, 当前为：${ratio}`;
+                        addLog(alertMessage);
+                
+                    }
+                } else {
+                    const errorMessage = "Error in Quote: " + await response.text();
+                    addLog(errorMessage);
+                    console.error(errorMessage);
+                }
+            } catch (error) {
+                addLog('错误: ' + error);
+                console.error(error);
+            }
+        }
+
+        // 每5秒执行一次
+        setInterval(checkPrice, 5000);
+        // 立即执行一次
+        checkPrice();
+    </script>
+</body>
 </html>
-
-<script>
-
-    $(function () {
-        $("#btn1").click(function () {
-            $("#add").html("")
-            query();
-        })
-
-        $("#btn2").click(function () {
-            var tmp = $("#add1").val()
-            $("#add1").val($("#add2").val())
-            $("#add2").val(tmp)
-        })
-    });
-
-    var query = function () {
-        $.ajaxSettings.async = false;
-        var list_A = new Array();
-        var list_B = new Array();
-        url_A = "https://frontend.poap.tech/actions/scan/" + $("#add1").val()
-        $.getJSON(url_A, function (data, status) {
-            data.forEach(item => {
-                list_A.push(item.event.name + "----" + item.event.image_url)
-            });
-        });
-
-        url_B = "https://frontend.poap.tech/actions/scan/" + $("#add2").val()
-        $.getJSON(url_B, function (data, status) {
-            data.forEach(item => {
-                list_B.push(item.event.name + "----" + item.event.image_url)
-            });
-        });
-
-        let minus = $(list_B).not(list_A).toArray();
-
-        minus.forEach(item => {
-
-            items = item.split("----")
-            div = "<div style='display: inline-block;padding: 30px;text-align: center;'>" +
-                "<img style='width: 100px;' src='" + items[1] + "'>" +
-                "<p>" + items[0] + "</p>" +
-                "</div>"
-            $("#add").append(div)
-        })
-    }
-
-
-
-</script>
