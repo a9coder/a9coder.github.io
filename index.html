@@ -1,0 +1,1439 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OKX DEX询价工具 - 图表版</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 10px; 
+            font-size: 14px;
+        }
+        h1 {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+        .info-panel {
+            background-color: #d1ecf1; 
+            color: #0c5460; 
+            padding: 8px; 
+            margin-bottom: 10px; 
+            border: 1px solid #bee5eb; 
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .info-panel ul {
+            margin: 5px 0;
+            padding-left: 20px;
+        }
+        .form-row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -5px;
+        }
+        .form-group { 
+            margin-bottom: 8px; 
+            padding: 0 5px;
+            box-sizing: border-box;
+            width: 25%;
+        }
+        @media (max-width: 1200px) {
+            .form-group { width: 33.333%; }
+        }
+        @media (max-width: 900px) {
+            .form-group { width: 50%; }
+        }
+        @media (max-width: 600px) {
+            .form-group { width: 100%; }
+        }
+        label { 
+            display: block; 
+            margin-bottom: 3px; 
+            font-size: 12px;
+        }
+        input, select { 
+            width: 100%; 
+            padding: 6px; 
+            box-sizing: border-box; 
+            font-size: 13px;
+        }
+        .token-select {
+            width: 100%;
+            padding: 6px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+        small {
+            font-size: 11px;
+            color: #6c757d;
+        }
+        button { 
+            padding: 8px 10px; 
+            background-color: #4CAF50; 
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            margin-right: 5px;
+            font-size: 13px;
+        }
+        button:hover { background-color: #45a049; }
+        #results { 
+            margin-top: 15px; 
+            border: 1px solid #ddd; 
+            padding: 10px; 
+            display: none; 
+        }
+        .chart-container { 
+            width: 100%; 
+            height: 250px; 
+            margin-top: 15px; 
+        }
+        .result-box {
+            display: flex;
+            margin-bottom: 15px;
+        }
+        .result-panel {
+            flex: 1; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            margin-right: 8px;
+        }
+        .result-panel:last-child {
+            margin-right: 0;
+        }
+        .result-panel h3 {
+            font-size: 14px;
+            margin: 0 0 8px 0;
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            font-size: 13px;
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 5px; 
+            text-align: left; 
+        }
+        th { background-color: #f2f2f2; }
+        #alertLogs {
+            margin-top: 15px;
+            border-top: 1px solid #ddd;
+            padding-top: 8px;
+            font-size: 12px;
+        }
+        .checkbox-container {
+            display: flex; 
+            align-items: center; 
+            background-color: #f8f9fa; 
+            padding: 8px; 
+            border-radius: 4px; 
+            border: 1px solid #ddd;
+            margin-left: 10px;
+            flex: 0 0 auto;
+            white-space: nowrap;
+        }
+        .checkbox-container input {
+            width: 16px; 
+            height: 16px; 
+            margin-right: 8px; 
+            cursor: pointer;
+        }
+        .checkbox-container label {
+            margin-bottom: 0; 
+            cursor: pointer; 
+            font-weight: 500;
+            font-size: 13px;
+        }
+        .action-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .action-row button {
+            margin-right: 5px;
+            white-space: nowrap;
+        }
+        @media (max-width: 768px) {
+            .checkbox-container {
+                margin-bottom: 10px;
+                margin-right: 0;
+                width: 100%;
+            }
+            .action-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .action-buttons {
+                display: flex;
+                flex-wrap: wrap;
+                width: 100%;
+            }
+            .action-buttons button {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>OKX DEX询价工具 - 图表版</h1>
+    
+    <div class="info-panel">
+        <strong>关于Telegram Bot通知：</strong> 
+        <ul>
+            <li>需要提前创建一个Telegram Bot（通过 @BotFather )</li>
+            <li>获取Bot Token和对应的Chat ID</li>
+            <li>Bot Token格式：123456789:ABCdefGhIJKlmNoPQRSTUVwxyZ</li>
+            <li>Chat ID： 在 Telegram 中搜索 @userinfobot</li>
+            <li>okx api key 申请：<a href="https://web3.okx.com/zh-hans/build/dev-portal" target="_blank">https://web3.okx.com/zh-hans/build/dev-portal </a></li>
+        </ul>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label for="apiKey">API Key:</label>
+            <input type="text" id="apiKey" value="">
+        </div>
+        
+        <div class="form-group">
+            <label for="secretKey">Secret Key:</label>
+            <input type="password" id="secretKey" value="">
+        </div>
+        
+        <div class="form-group">
+            <label for="passphrase">Passphrase:</label>
+            <input type="password" id="passphrase" value="">
+        </div>
+        
+        <div class="form-group">
+            <label for="chainIndex">链索引 (如56代表BSC):</label>
+            <input type="number" id="chainIndex" value="56">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label for="fromTokenAddress">源代币地址:</label>
+            <select id="fromTokenAddress" class="token-select">
+                <option value="">-- 选择代币或输入地址 --</option>
+                <!-- 代币选项将通过JavaScript动态添加 -->
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="toTokenAddress">目标代币地址:</label>
+            <select id="toTokenAddress" class="token-select">
+                <option value="">-- 选择代币或输入地址 --</option>
+                <!-- 代币选项将通过JavaScript动态添加 -->
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="amount">输入数量:</label>
+            <input type="number" id="amount" step="0.01" value="3.2">
+        </div>
+        
+        <div class="form-group">
+            <label for="outAmtAlert">输出数量:</label>
+            <input type="number" id="outAmtAlert" step="0.01" value="1000">
+        </div>
+    </div>
+    
+    <div class="form-row">
+        <div class="form-group">
+            <label for="queryInterval">查询间隔(秒):</label>
+            <input type="number" id="queryInterval" min="1" value="2">
+        </div>
+        
+        <div class="form-group">
+            <label for="maxDataPoints">显示数据点数量:</label>
+            <input type="number" id="maxDataPoints" min="10" max="1000" value="1000">
+        </div>
+        
+        <div class="form-group">
+            <label for="botToken">Telegram Bot Token:</label>
+            <input type="text" id="botToken" placeholder="123456789:ABCdefGhIJKlmNoPQRSTUVwxyZ">
+        </div>
+        
+        <div class="form-group">
+            <label for="chatId">Telegram Chat ID:</label>
+            <input type="text" id="chatId" placeholder="12345678">
+        </div>
+    </div>
+    
+    <div class="action-row">
+        <div class="action-buttons">
+            <button id="startBtn" onclick="startQuery()" style="background-color: #4CAF50;">开始查询（大于阈值）</button>
+            <button id="startLessBtn" onclick="startQueryLess()" style="background-color: #e67e22;">开始查询（小于阈值）</button>
+            <button id="startReverseBtn" onclick="startReverseQuery()" style="background-color: #9b59b6;">开始查询（反向）</button>
+            <button id="calculateSlippageBtn" onclick="calculateSlippage()" style="background-color: #e74c3c;">计算磨损</button>
+            <button id="stopBtn" onclick="stopQuery()" disabled>停止查询</button>
+            <button id="clearChartBtn" onclick="clearChart()" disabled>清空图表</button>
+            <button id="saveConfigBtn" onclick="saveParamsToStorage()" style="background-color: #007bff;">保存配置</button>
+        </div>
+        
+        <div class="checkbox-container">
+            <input type="checkbox" id="isBreak" style="width: 16px; height: 16px; margin-right: 8px; cursor: pointer;">
+            <label for="isBreak" style="margin-bottom: 0; cursor: pointer; font-weight: 500;">超过阈值时停止查询</label>
+        </div>
+    </div>
+    
+    <div id="results">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="font-size: 16px; margin: 0;">查询结果</h2>
+            <p id="queryTime" style="font-size: 13px; margin: 0;"></p>
+        </div>
+        
+        <div class="result-box">
+            <div class="result-panel" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center;">
+                    <h3 style="margin: 0; margin-right: 10px;">最大输出量:</h3>
+                    <span id="maxAmountOut" style="font-size: 16px; font-weight: bold;"></span>
+                </div>
+                <div id="maxDexName" style="color: #666; font-size: 12px;"></div>
+            </div>
+            <div class="result-panel" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center;">
+                    <h3 style="margin: 0; margin-right: 10px;">当前状态:</h3>
+                    <span id="statusInfo" style="font-size: 14px;"></span>
+                </div>
+                <div id="alertMessage" style="color: red; font-size: 12px;"></div>
+            </div>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="priceChart"></canvas>
+        </div>
+        
+        <div id="alertLogs" style="display: none;">
+            <h3 style="font-size: 14px; margin: 0 0 5px 0;">Telegram通知日志</h3>
+            <div id="alertLogsList" style="max-height: 120px; overflow-y: auto;"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 代币列表数组，包含简称和地址
+        const tokenList = [
+            { symbol: 'WBNB', address: '0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c' },
+            { symbol: 'USDT', address: '0x55d398326f99059fF775485246999027B3197955' },
+            { symbol: 'ZKJ', address: '0xC71B5F631354BE6853eFe9C3Ab6b9590F8302e81' },
+            { symbol: 'B2', address: '0x783c3f003f172c6Ac5AC700218a357d2D66Ee2a2' },
+            { symbol: 'KOGE', address: '0xe6DF05CE8C8301223373CF5B969AFCb1498c5528' },
+            { symbol: 'SKYAI', address: '0x92aa03137385f18539301349dcfc9ebc923ffb10' },
+            { symbol: 'AGT', address: '0x5dbde81fce337ff4bcaaee4ca3466c00aecae274' },
+            { symbol: 'SOON', address: '0xb9e1fd5a02d3a33b25a14d661414e6ed6954a721' },
+        ];
+        
+        // 初始化代币下拉框
+        function initTokenSelects() {
+            const fromSelect = document.getElementById('fromTokenAddress');
+            const toSelect = document.getElementById('toTokenAddress');
+            
+            // 清空现有选项（保留第一个默认选项）
+            while (fromSelect.options.length > 1) {
+                fromSelect.remove(1);
+            }
+            while (toSelect.options.length > 1) {
+                toSelect.remove(1);
+            }
+            
+            // 添加代币选项
+            tokenList.forEach(token => {
+                const fromOption = document.createElement('option');
+                fromOption.value = token.address;
+                fromOption.textContent = `${token.symbol} (${token.address.substring(0, 6)}...${token.address.substring(token.address.length - 4)})`;
+                fromSelect.appendChild(fromOption);
+                
+                const toOption = document.createElement('option');
+                toOption.value = token.address;
+                toOption.textContent = `${token.symbol} (${token.address.substring(0, 6)}...${token.address.substring(token.address.length - 4)})`;
+                toSelect.appendChild(toOption);
+            });
+            
+            // 为下拉框添加可编辑功能
+            makeSelectsEditable();
+        }
+        
+        // 使下拉框可编辑
+        function makeSelectsEditable() {
+            const tokenSelects = document.querySelectorAll('.token-select');
+            
+            tokenSelects.forEach(select => {
+                // 允许直接输入值
+                select.addEventListener('change', function() {
+                    if (this.value === 'custom') {
+                        const customValue = prompt('请输入代币地址:');
+                        if (customValue && customValue.trim() !== '') {
+                            // 检查是否已存在该选项
+                            let exists = false;
+                            for (let i = 0; i < this.options.length; i++) {
+                                if (this.options[i].value === customValue) {
+                                    this.value = customValue;
+                                    exists = true;
+                                    break;
+                                }
+                            }
+                            
+                            // 如果不存在，添加新选项
+                            if (!exists) {
+                                const newOption = document.createElement('option');
+                                newOption.value = customValue;
+                                newOption.textContent = `自定义 (${customValue.substring(0, 6)}...${customValue.substring(customValue.length - 4)})`;
+                                this.appendChild(newOption);
+                                this.value = customValue;
+                            }
+                        } else {
+                            this.value = ''; // 如果用户取消，选择第一个选项
+                        }
+                    }
+                    
+                    // 每次更改时保存配置
+                    saveParamsToStorage(false);
+                });
+                
+                // 添加自定义选项
+                const customOption = document.createElement('option');
+                customOption.value = 'custom';
+                customOption.textContent = '-- 输入自定义地址 --';
+                select.appendChild(customOption);
+            });
+        }
+        
+        let queryInterval;
+        let priceChart;
+        let chartData = {
+            labels: [],
+            datasets: [{
+                label: '最大输出量',
+                data: [],
+                borderColor: 'rgb(75, 192, 192)',
+                tension: 0.1,
+                fill: false
+            }]
+        };
+        // 跟踪查询方向，默认是正向
+        let isReverseQuery = false;
+        // 标记当前查询模式
+        let currentQueryMode = null; // 'normal', 'less', 'reverse', 'slippage'
+        
+        // localStorage 操作函数
+        function saveToLocalStorage(key, value) {
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+                return true;
+            } catch (e) {
+                console.error("保存到localStorage失败:", e);
+                return false;
+            }
+        }
+        
+        function getFromLocalStorage(key, defaultValue = "") {
+            try {
+                const value = localStorage.getItem(key);
+                return value ? JSON.parse(value) : defaultValue;
+            } catch (e) {
+                console.error("从localStorage读取失败:", e);
+                return defaultValue;
+            }
+        }
+        
+        // 保存所有参数到localStorage
+        function saveParamsToStorage(showAlert = true) {
+            const config = {
+                // API相关参数
+                apiKey: document.getElementById("apiKey").value,
+                secretKey: document.getElementById("secretKey").value,
+                passphrase: document.getElementById("passphrase").value,
+                
+                // 交易相关参数
+                chainIndex: document.getElementById("chainIndex").value,
+                fromTokenAddress: document.getElementById("fromTokenAddress").value,
+                toTokenAddress: document.getElementById("toTokenAddress").value,
+                amount: document.getElementById("amount").value,
+                outAmtAlert: document.getElementById("outAmtAlert").value,
+                
+                // 其他配置
+                queryInterval: document.getElementById("queryInterval").value,
+                maxDataPoints: document.getElementById("maxDataPoints").value,
+                isBreak: document.getElementById("isBreak").checked,
+                
+                // Telegram Bot配置
+                botToken: document.getElementById("botToken").value,
+                chatId: document.getElementById("chatId").value,
+                
+                // 保存时间
+                savedAt: new Date().toISOString()
+            };
+            
+            const saved = saveToLocalStorage("okxDexSettings", config);
+            
+            if (showAlert) {
+                if (saved) {
+                    // 创建一个临时提示框
+                    const notification = document.createElement("div");
+                    notification.style.position = "fixed";
+                    notification.style.bottom = "20px";
+                    notification.style.right = "20px";
+                    notification.style.backgroundColor = "#4CAF50";
+                    notification.style.color = "white";
+                    notification.style.padding = "10px";
+                    notification.style.borderRadius = "5px";
+                    notification.style.zIndex = "1000";
+                    notification.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+                    notification.style.fontSize = "13px";
+                    notification.textContent = "配置已保存到本地存储！";
+                    
+                    document.body.appendChild(notification);
+                    
+                    // 3秒后自动消失
+                    setTimeout(function() {
+                        document.body.removeChild(notification);
+                    }, 3000);
+                } else {
+                    alert("配置保存失败，请检查浏览器是否支持localStorage！");
+                }
+            }
+            
+            return saved;
+        }
+        
+        // 从localStorage加载参数
+        function loadParamsFromStorage() {
+            const config = getFromLocalStorage("okxDexSettings", null);
+            
+            if (!config) {
+                console.log("没有找到保存的配置");
+                return false;
+            }
+            
+            console.log("正在加载保存的配置...");
+            
+            // API相关参数
+            if (config.apiKey) document.getElementById("apiKey").value = config.apiKey;
+            if (config.secretKey) document.getElementById("secretKey").value = config.secretKey;
+            if (config.passphrase) document.getElementById("passphrase").value = config.passphrase;
+            
+            // 交易相关参数
+            if (config.chainIndex) document.getElementById("chainIndex").value = config.chainIndex;
+            if (config.fromTokenAddress) document.getElementById("fromTokenAddress").value = config.fromTokenAddress;
+            if (config.toTokenAddress) document.getElementById("toTokenAddress").value = config.toTokenAddress;
+            if (config.amount) document.getElementById("amount").value = config.amount;
+            if (config.outAmtAlert) document.getElementById("outAmtAlert").value = config.outAmtAlert;
+            
+            // 其他配置
+            if (config.queryInterval) document.getElementById("queryInterval").value = config.queryInterval;
+            if (config.maxDataPoints) document.getElementById("maxDataPoints").value = config.maxDataPoints;
+            if (config.isBreak !== undefined) document.getElementById("isBreak").checked = config.isBreak;
+            
+            // Telegram Bot配置
+            if (config.botToken) document.getElementById("botToken").value = config.botToken;
+            if (config.chatId) document.getElementById("chatId").value = config.chatId;
+            
+            console.log("配置加载完成，保存时间：", config.savedAt);
+            return true;
+        }
+        
+        // 页面加载完成后执行
+        window.addEventListener("load", function() {
+            console.log("页面加载完成，准备加载配置...");
+            
+            // 初始化代币下拉框
+            initTokenSelects();
+            
+            // 加载保存的配置
+            const loaded = loadParamsFromStorage();
+            
+            if (loaded) {
+                // 创建一个临时提示框
+                const notification = document.createElement("div");
+                notification.style.position = "fixed";
+                notification.style.bottom = "20px";
+                notification.style.right = "20px";
+                notification.style.backgroundColor = "#007bff";
+                notification.style.color = "white";
+                notification.style.padding = "10px";
+                notification.style.borderRadius = "5px";
+                notification.style.zIndex = "1000";
+                notification.style.boxShadow = "0 4px 8px rgba(0,0,0,0.2)";
+                notification.style.fontSize = "13px";
+                notification.textContent = "已加载保存的配置！";
+                
+                document.body.appendChild(notification);
+                
+                // 3秒后自动消失
+                setTimeout(function() {
+                    document.body.removeChild(notification);
+                }, 3000);
+            }
+            
+            // 为所有输入字段添加change事件，自动保存配置
+            const inputFields = document.querySelectorAll("input, select");
+            inputFields.forEach(field => {
+                field.addEventListener("change", function() {
+                    saveParamsToStorage(false); // 不显示提示
+                });
+            });
+        });
+        
+        // 初始化图表
+        function initChart() {
+            const ctx = document.getElementById('priceChart').getContext('2d');
+            priceChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '查询时间',
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: '输出数量',
+                                font: {
+                                    size: 11
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.parsed.y}`;
+                                }
+                            },
+                            titleFont: {
+                                size: 11
+                            },
+                            bodyFont: {
+                                size: 11
+                            }
+                        },
+                        legend: {
+                            labels: {
+                                font: {
+                                    size: 11
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 更新图表数据
+        function updateChart(label, value) {
+            const maxDataPoints = parseInt(document.getElementById('maxDataPoints').value) || 50;
+            
+            // 添加新数据点
+            chartData.labels.push(label);
+            chartData.datasets[0].data.push(value);
+            
+            // 如果数据点超过最大显示数量，移除最早的数据点
+            if (chartData.labels.length > maxDataPoints) {
+                chartData.labels.shift();
+                chartData.datasets[0].data.shift();
+            }
+            
+            // 更新图表
+            priceChart.update();
+        }
+        
+        // 清空图表数据
+        function clearChart() {
+            chartData.labels = [];
+            chartData.datasets[0].data = [];
+            priceChart.update();
+            document.getElementById('maxAmountOut').textContent = '-';
+            document.getElementById('maxDexName').textContent = '-';
+        }
+        
+        // 发送Telegram通知
+        async function sendTelegramNotification(message) {
+            const botToken = document.getElementById("botToken").value;
+            const chatId = document.getElementById("chatId").value;
+            
+            // 记录告警日志
+            const timestamp = new Date().toLocaleString();
+            const logEntry = document.createElement("p");
+            logEntry.innerHTML = `<strong>${timestamp}</strong>: ${message}`;
+            logEntry.style.margin = "3px 0";
+            logEntry.style.fontSize = "12px";
+            
+            // 显示告警日志区域
+            document.getElementById("alertLogs").style.display = "block";
+            
+            // 添加日志条目
+            const logsList = document.getElementById("alertLogsList");
+            logsList.insertBefore(logEntry, logsList.firstChild);
+            
+            if (!botToken || !chatId) {
+                logEntry.innerHTML += ' <span style="color:#ffc107">(未发送: 未设置Telegram Bot Token或Chat ID)</span>';
+                console.log("未设置Telegram Bot信息，跳过告警发送");
+                return;
+            }
+            
+            // 构造Telegram API URL
+            const telegramApiUrl = `https://api.telegram.org/bot${botToken}/sendMessage`;
+            
+            try {
+                const response = await fetch(telegramApiUrl, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        chat_id: chatId,
+                        text: message
+                    })
+                });
+                
+                const responseData = await response.json();
+                
+                if (!response.ok || !responseData.ok) {
+                    throw new Error(responseData.description || `发送失败: ${response.status}`);
+                }
+                
+                logEntry.innerHTML += ' <span style="color:green">(已发送)</span>';
+                console.log("Telegram通知发送成功");
+            } catch (error) {
+                logEntry.innerHTML += ` <span style="color:red">(发送失败: ${error.message})</span>`;
+                console.error("发送Telegram通知错误:", error);
+                document.getElementById("alertMessage").textContent += " (告警发送失败: " + error.message + ")";
+            }
+        }
+        
+        // 生成签名
+        async function generateSignature(timestamp, method, requestPath, body, secretKey) {
+            const message = timestamp + method.toUpperCase() + requestPath + (body ? body : "");
+            const key = new TextEncoder().encode(secretKey);
+            const messageBytes = new TextEncoder().encode(message);
+            
+            const cryptoKey = await crypto.subtle.importKey(
+                "raw", key, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+            );
+            
+            const signature = await crypto.subtle.sign(
+                "HMAC", cryptoKey, messageBytes
+            );
+            
+            return btoa(String.fromCharCode.apply(null, new Uint8Array(signature)));
+        }
+        
+        // 辅助函数：将数值转换为Wei，并确保不使用科学计数法
+        function formatToWei(value) {
+                // 使用BigInt确保精确计算
+                const valueStr = value.toString();
+                // 检查是否包含小数点
+                if (valueStr.includes('.')) {
+                    const parts = valueStr.split('.');
+                    const integerPart = parts[0];
+                    let decimalPart = parts[1];
+                    // 截断或补零至18位小数
+                    if (decimalPart.length > 18) {
+                        decimalPart = decimalPart.substring(0, 18);
+                    } else {
+                        decimalPart = decimalPart.padEnd(18, '0');
+                    }
+                    return integerPart + decimalPart;
+                } else {
+                    // 无小数点，直接加18个0
+                    return valueStr + '000000000000000000';
+                }
+            }
+
+        // 获取DEX询价
+        async function getDexQuote() {
+            const apiKey = document.getElementById("apiKey").value;
+            const secretKey = document.getElementById("secretKey").value;
+            const passphrase = document.getElementById("passphrase").value;
+            const chainIndex = document.getElementById("chainIndex").value;
+            const fromTokenAddress = document.getElementById("fromTokenAddress").value;
+            const toTokenAddress = document.getElementById("toTokenAddress").value;
+            const amount = document.getElementById("amount").value;
+            
+            // 构建查询参数
+            const queryParams = {
+                chainIndex: chainIndex,
+                fromTokenAddress: fromTokenAddress,
+                toTokenAddress: toTokenAddress,
+                amount: formatToWei(amount) // 转为Wei (18位小数)
+            };
+            
+            const queryString = Object.entries(queryParams)
+                .map(([k, v]) => `${k}=${v}`)
+                .join("&");
+                
+            const requestPath = `/api/v5/dex/aggregator/quote?${queryString}`;
+            
+            // 生成时间戳
+            const now = new Date();
+            const timestamp = now.toISOString().slice(0, -1) + "Z";
+            
+            // 生成签名
+            const signature = await generateSignature(timestamp, "GET", requestPath, "", secretKey);
+            
+            // 直接访问API而不使用代理
+            const baseUrl = "https://web3.okx.com/api/v5/dex/aggregator/quote";
+            
+            try {
+                const response = await fetch(`${baseUrl}?${queryString}`, {
+                    method: "GET",
+                    headers: {
+                        "OK-ACCESS-KEY": apiKey,
+                        "OK-ACCESS-SIGN": signature,
+                        "OK-ACCESS-PASSPHRASE": passphrase,
+                        "OK-ACCESS-TIMESTAMP": timestamp,
+                        "Content-Type": "application/json"
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP错误: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error("请求错误:", error);
+                // 检查是否为CORS错误
+                if (error.message && error.message.includes('CORS')) {
+                    return { 
+                        error: "跨域请求错误(CORS): " + error.message,
+                        note: "由于浏览器安全限制，直接访问API可能会遇到CORS问题。建议使用本地服务器或后端代理来解决此问题。" 
+                    };
+                }
+                return { error: error.message };
+            }
+        }
+        
+        // 提取数据
+function extractAmountOutAndDexName(data) {
+    try {
+        // 直接从响应中获取toTokenAmount
+        const toTokenAmount = data.data[0].toTokenAmount;
+        // 将toTokenAmount从wei转换为标准单位 (处理科学计数法)
+        let amountOut;
+        if (toTokenAmount.includes('e') || toTokenAmount.length > 15) {
+            // 如果是科学计数法或长数字，需要特殊处理
+            amountOut = parseFloat(toTokenAmount) / 1e18;
+        } else {
+            // 标准处理：将字符串除以10^18
+            // 先将字符串转为大数处理，避免精度问题
+            const bigNum = BigInt(toTokenAmount);
+            const divisor = BigInt(10**18);
+            const wholePart = (bigNum / divisor).toString();
+            const fractionalPart = (bigNum % divisor).toString().padStart(18, '0');
+            // 构建浮点数字符串
+            amountOut = `${wholePart}.${fractionalPart}`.replace(/\.?0+$/, '');
+        }
+        
+        // 获取最大交易所信息
+        let bestDexName = "未知";
+        try {
+            const quoteCompareList = data.data[0].quoteCompareList;
+            if (quoteCompareList && quoteCompareList.length > 0) {
+                // 找出最大的dex
+                bestDexName = quoteCompareList.reduce((max, current) =>
+                    parseFloat(current.amountOut) > parseFloat(max.amountOut) ? current : max
+                ).dexName;
+            }
+        } catch (err) {
+            console.warn("获取最佳DEX信息失败，使用默认值", err);
+        }
+
+        // 返回单个结果对象而不是数组
+        return {
+            dexName: bestDexName,
+            amountOut: typeof amountOut === 'string' ? amountOut : amountOut.toString()
+        };
+    } catch (error) {
+        console.error("提取数据错误:", error);
+        return { error: `无法提取数据: ${error.message}` };
+    }
+}
+
+// 由于现在直接返回单个结果，不再需要查找最大值
+function findMaxAmountOut(result) {
+    // 保留此函数以避免修改太多代码，但直接返回结果
+    return result;
+}
+        
+        // 统一的停止查询函数
+        function stopQuery() {
+            if (queryInterval) {
+                console.log("停止查询");
+                clearInterval(queryInterval);
+                queryInterval = null;
+            }
+            document.getElementById("startBtn").disabled = false;
+            document.getElementById("startLessBtn").disabled = false;
+            document.getElementById("startReverseBtn").disabled = false;
+            document.getElementById("calculateSlippageBtn").disabled = false;
+            document.getElementById("stopBtn").disabled = true;
+            document.getElementById('statusInfo').innerHTML = '<span style="color: gray;">已停止</span>';
+            currentQueryMode = null;
+        }
+        
+        // 统一的开始查询前准备
+        function prepareForQuery(mode) {
+            // 如果已有查询在运行，先停止它
+            if (queryInterval) {
+                console.log("停止之前的查询");
+                clearInterval(queryInterval);
+                queryInterval = null;
+            }
+            
+            // 是否需要清空图表
+            const needClearChart = (mode === 'slippage' || 
+                                  (mode !== 'reverse' && isReverseQuery) || 
+                                  (mode === 'reverse' && !isReverseQuery));
+                                  
+            // 更新反向查询标记
+            isReverseQuery = (mode === 'reverse');
+            
+            // 更新当前查询模式
+            currentQueryMode = mode;
+            
+            // 如果需要清空图表，则清空
+            if (needClearChart && priceChart) {
+                clearChart();
+            }
+            
+            // 如果图表未初始化，先初始化
+            if (!priceChart) {
+                initChart();
+            }
+            
+            // 更新UI状态
+            document.getElementById("stopBtn").disabled = false;
+            document.getElementById("clearChartBtn").disabled = false;
+            document.getElementById("results").style.display = "block";
+            
+            return parseInt(document.getElementById("queryInterval").value);
+        }
+
+        // 计算磨损
+        async function calculateSlippage() {
+            // 准备查询 - 'slippage'表示磨损计算模式
+            const queryIntervalValue = prepareForQuery('slippage');
+            
+            // 定义计算磨损的异步函数
+            async function runSlippageCalculation() {
+                // 记录函数开始运行
+                console.log("开始进行磨损计算", new Date().toLocaleTimeString());
+                
+                // 保存参数
+                const fromTokenAddress = document.getElementById("fromTokenAddress").value;
+                const toTokenAddress = document.getElementById("toTokenAddress").value;
+                const amount = document.getElementById("amount").value;
+                
+                try {
+                    // 第一步：计算正向交易（买入）
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: blue;">正在计算买入价格...</span>';
+                    console.log("正在计算买入价格", new Date().toLocaleTimeString());
+                    
+                    // 准备API调用参数
+                    const apiKey = document.getElementById("apiKey").value;
+                    const secretKey = document.getElementById("secretKey").value;
+                    const passphrase = document.getElementById("passphrase").value;
+                    const chainIndex = document.getElementById("chainIndex").value;
+                    
+                    // 第一步：买入查询
+                    const buyQueryParams = {
+                        chainIndex: chainIndex,
+                        fromTokenAddress: fromTokenAddress, 
+                        toTokenAddress: toTokenAddress,
+                        amount: formatToWei(amount)
+                    };
+                    
+                    const buyQueryString = Object.entries(buyQueryParams)
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join("&");
+                        
+                    const buyRequestPath = `/api/v5/dex/aggregator/quote?${buyQueryString}`;
+                    
+                    // 生成时间戳和签名
+                    const buyNow = new Date();
+                    const buyTimestamp = buyNow.toISOString().slice(0, -1) + "Z";
+                    const buySignature = await generateSignature(buyTimestamp, "GET", buyRequestPath, "", secretKey);
+                    
+                    const baseUrl = "https://web3.okx.com/api/v5/dex/aggregator/quote";
+                    console.log("买入API调用", baseUrl);
+                    
+                    // 买入API调用
+                    const buyResponse = await fetch(`${baseUrl}?${buyQueryString}`, {
+                        method: "GET",
+                        headers: {
+                            "OK-ACCESS-KEY": apiKey,
+                            "OK-ACCESS-SIGN": buySignature,
+                            "OK-ACCESS-PASSPHRASE": passphrase,
+                            "OK-ACCESS-TIMESTAMP": buyTimestamp,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                    
+                    if (!buyResponse.ok) {
+                        throw new Error(`买入查询HTTP错误: ${buyResponse.status}`);
+                    }
+                    
+                    const buyData = await buyResponse.json();
+                    console.log("买入API返回", buyData);
+                    const buyResult = extractAmountOutAndDexName(buyData);
+                    
+                    if (buyResult.error) {
+                        throw new Error(buyResult.error);
+                    }
+                    
+                    const buyAmount = buyResult.amountOut;
+                    const buyDex = buyResult.dexName;
+                    
+                    // 更新显示
+                    document.getElementById('maxAmountOut').textContent = buyAmount;
+                    document.getElementById('maxDexName').textContent = buyDex;
+                    
+                    // 等待2秒
+                    const waitTime = 2000;
+                    document.getElementById('statusInfo').innerHTML = `<span style="color: blue;">等待${waitTime/1000}秒后计算卖出价格...</span>`;
+                    console.log("等待2秒后计算卖出价格");
+                    await new Promise(resolve => setTimeout(resolve, waitTime));
+                    
+                    // 第二步：计算反向交易（卖出）
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: blue;">正在计算卖出价格...</span>';
+                    console.log("正在计算卖出价格", new Date().toLocaleTimeString());
+                    
+                    // 反向查询参数
+                    const sellQueryParams = {
+                        chainIndex: chainIndex,
+                        fromTokenAddress: toTokenAddress, // 反向：原目标代币作为源
+                        toTokenAddress: fromTokenAddress, // 反向：原源代币作为目标
+                        amount: formatToWei(buyAmount) // 使用第一步买入得到的数量
+                    };
+                    
+                    const sellQueryString = Object.entries(sellQueryParams)
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join("&");
+                        
+                    const sellRequestPath = `/api/v5/dex/aggregator/quote?${sellQueryString}`;
+                    
+                    // 生成新的时间戳和签名
+                    const sellNow = new Date();
+                    const sellTimestamp = sellNow.toISOString().slice(0, -1) + "Z";
+                    const sellSignature = await generateSignature(sellTimestamp, "GET", sellRequestPath, "", secretKey);
+                    
+                    console.log("卖出API调用", baseUrl);
+                    
+                    // 卖出API调用
+                    const sellResponse = await fetch(`${baseUrl}?${sellQueryString}`, {
+                        method: "GET",
+                        headers: {
+                            "OK-ACCESS-KEY": apiKey,
+                            "OK-ACCESS-SIGN": sellSignature,
+                            "OK-ACCESS-PASSPHRASE": passphrase,
+                            "OK-ACCESS-TIMESTAMP": sellTimestamp,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                    
+                    if (!sellResponse.ok) {
+                        throw new Error(`卖出查询HTTP错误: ${sellResponse.status}`);
+                    }
+                    
+                    const sellData = await sellResponse.json();
+                    console.log("卖出API返回", sellData);
+                    const sellResult = extractAmountOutAndDexName(sellData);
+                    
+                    if (sellResult.error) {
+                        throw new Error(sellResult.error);
+                    }
+                    
+                    const sellAmount = sellResult.amountOut;
+                    const sellDex = sellResult.dexName;
+                    
+                    // 计算磨损
+                    const originalAmountNum = parseFloat(amount);
+                    const sellAmountNum = parseFloat(sellAmount);
+                    const slippage = originalAmountNum - sellAmountNum;
+                    const slippagePercentage = (slippage / originalAmountNum) * 100;
+                    
+                    // 更新显示
+                    const currentTime = new Date().toLocaleString();
+                    document.getElementById("queryTime").textContent = `磨损计算时间: ${currentTime}`;
+                    document.getElementById('maxAmountOut').textContent = slippage.toFixed(8);
+                    document.getElementById('maxDexName').textContent = `磨损率: ${slippagePercentage.toFixed(4)}%`;
+                    
+                    // 更新图表
+                    const shortTime = new Date().toLocaleTimeString();
+                    updateChart(shortTime, slippage);
+                    
+                    // 更新状态
+                    document.getElementById('statusInfo').innerHTML = `<span style="color: ${slippagePercentage > 1 ? 'red' : 'green'};">磨损计算完成</span>`;
+                    document.getElementById("alertMessage").textContent = 
+                        `买入: ${buyAmount} (${buyDex}) | 卖出: ${sellAmount} (${sellDex})`;
+                    
+                    console.log("磨损计算完成", new Date().toLocaleTimeString());
+                    
+                } catch (error) {
+                    console.error("计算磨损错误:", error);
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: red;">计算失败</span>';
+                    document.getElementById("alertMessage").textContent = `发生错误: ${error.message}`;
+                }
+                
+                console.log("磨损计算函数执行完毕", new Date().toLocaleTimeString());
+            }
+            
+            // 立即执行一次
+            await runSlippageCalculation();
+            
+            // 设置定时器 - 确保上一次计算完成后再执行下一次
+            queryInterval = setInterval(async () => {
+                // 检查当前模式，确保我们仍处于磨损计算模式
+                if (currentQueryMode === 'slippage') {
+                    console.log("开始新一轮磨损计算", new Date().toLocaleTimeString());
+                    await runSlippageCalculation();
+                } else {
+                    console.log("模式已更改，停止磨损计算");
+                    clearInterval(queryInterval);
+                    queryInterval = null;
+                }
+            }, queryIntervalValue * 2000);
+        }
+
+        // 开始查询
+        function startQuery() {
+            // 准备查询 - 'normal'表示正常查询模式
+            const queryIntervalValue = prepareForQuery('normal');
+            
+            const outAmtAlert = parseFloat(document.getElementById("outAmtAlert").value);
+            
+            async function runQuery() {
+                console.log("开始正向查询", new Date().toLocaleTimeString());
+                try {
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: blue;">正在查询...</span>';
+                    
+                    // 获取询价数据
+                    const response = await getDexQuote();
+                    
+                    // 提取数据
+                    const result = extractAmountOutAndDexName(response);
+                    
+                    // 当前时间
+                    const currentTime = new Date().toLocaleString();
+                    document.getElementById("queryTime").textContent = `查询时间: ${currentTime}`;
+                    
+                    if (!result.error) {
+                        // 直接使用结果
+                        const maxResult = result;
+                        
+                        if (maxResult) {
+                            // 更新最大输出量显示
+                            document.getElementById('maxAmountOut').textContent = maxResult.amountOut;
+                            document.getElementById('maxDexName').textContent = maxResult.dexName;
+                            
+                            // 更新图表
+                            const shortTime = new Date().toLocaleTimeString();
+                            updateChart(shortTime, parseFloat(maxResult.amountOut));
+                            
+                            // 检查是否超过阈值
+                            const maxAmountValue = parseFloat(maxResult.amountOut);
+                            if (maxAmountValue > outAmtAlert) {
+                                document.getElementById("alertMessage").textContent = "当前价格超过阈值!";
+                                document.getElementById('statusInfo').innerHTML = '<span style="color: red;">价格超过阈值!</span>';
+                                
+                                // 发送Telegram通知
+                                sendTelegramNotification(`当前价格超过阈值：${maxResult.amountOut}`);
+                                
+                                if (document.getElementById("isBreak").checked) {
+                                    stopQuery();
+                                    return;
+                                }
+                            } else {
+                                document.getElementById("alertMessage").textContent = "";
+                                document.getElementById('statusInfo').innerHTML = '<span style="color: green;">正常监控中</span>';
+                            }
+                        }
+                    } else {
+                        // 显示错误信息
+                        document.getElementById('statusInfo').innerHTML = '<span style="color: red;">获取数据失败</span>';
+                        document.getElementById("alertMessage").textContent = result.error || "获取数据失败";
+                        
+                        // 显示CORS错误的额外提示
+                        if (result.note) {
+                            document.getElementById("alertMessage").textContent += "\n" + result.note;
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error("查询错误:", error);
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: red;">发生错误</span>';
+                    document.getElementById("alertMessage").textContent = `发生错误: ${error.message}`;
+                }
+            }
+            
+            // 立即执行一次
+            runQuery();
+            
+            // 设置定时器
+            queryInterval = setInterval(async () => {
+                // 检查当前模式
+                if (currentQueryMode === 'normal') {
+                    await runQuery();
+                } else {
+                    console.log("模式已更改，停止正向查询");
+                    clearInterval(queryInterval);
+                    queryInterval = null;
+                }
+            }, queryIntervalValue * 1000);
+        }
+        
+        // 当价格小于阈值时查询
+        function startQueryLess() {
+            // 准备查询 - 'less'表示小于阈值查询模式
+            const queryIntervalValue = prepareForQuery('less');
+            
+            const outAmtAlert = parseFloat(document.getElementById("outAmtAlert").value);
+            
+            async function runQuery() {
+                console.log("开始小于阈值查询", new Date().toLocaleTimeString());
+                try {
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: blue;">正在查询...</span>';
+                    
+                    // 获取询价数据
+                    const response = await getDexQuote();
+                    
+                    // 提取数据
+                    const result = extractAmountOutAndDexName(response);
+                    
+                    // 当前时间
+                    const currentTime = new Date().toLocaleString();
+                    document.getElementById("queryTime").textContent = `查询时间: ${currentTime}`;
+                    
+                    if (!result.error) {
+                        // 直接使用结果
+                        const maxResult = result;
+                        
+                        if (maxResult) {
+                            // 更新最大输出量显示
+                            document.getElementById('maxAmountOut').textContent = maxResult.amountOut;
+                            document.getElementById('maxDexName').textContent = maxResult.dexName;
+                            
+                            // 更新图表
+                            const shortTime = new Date().toLocaleTimeString();
+                            updateChart(shortTime, parseFloat(maxResult.amountOut));
+                            
+                            // 检查是否小于阈值
+                            const maxAmountValue = parseFloat(maxResult.amountOut);
+                            if (maxAmountValue < outAmtAlert) {
+                                document.getElementById("alertMessage").textContent = "当前价格低于阈值!";
+                                document.getElementById('statusInfo').innerHTML = '<span style="color: orange;">价格低于阈值!</span>';
+                                
+                                // 发送Telegram通知
+                                sendTelegramNotification(`当前价格低于阈值：${maxResult.amountOut}`);
+                                
+                                if (document.getElementById("isBreak").checked) {
+                                    stopQuery();
+                                    return;
+                                }
+                            } else {
+                                document.getElementById("alertMessage").textContent = "";
+                                document.getElementById('statusInfo').innerHTML = '<span style="color: green;">正常监控中</span>';
+                            }
+                        }
+                    } else {
+                        // 显示错误信息
+                        document.getElementById('statusInfo').innerHTML = '<span style="color: red;">获取数据失败</span>';
+                        document.getElementById("alertMessage").textContent = result.error || "获取数据失败";
+                        
+                        // 显示CORS错误的额外提示
+                        if (result.note) {
+                            document.getElementById("alertMessage").textContent += "\n" + result.note;
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error("查询错误:", error);
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: red;">发生错误</span>';
+                    document.getElementById("alertMessage").textContent = `发生错误: ${error.message}`;
+                }
+            }
+            
+            // 立即执行一次
+            runQuery();
+            
+            // 设置定时器
+            queryInterval = setInterval(async () => {
+                // 检查当前模式
+                if (currentQueryMode === 'less') {
+                    await runQuery();
+                } else {
+                    console.log("模式已更改，停止小于阈值查询");
+                    clearInterval(queryInterval);
+                    queryInterval = null;
+                }
+            }, queryIntervalValue * 1000);
+        }
+        
+        // 开始反向查询（交换源代币和目标代币）
+        function startReverseQuery() {
+            // 准备查询 - 'reverse'表示反向查询模式
+            const queryIntervalValue = prepareForQuery('reverse');
+            
+            const outAmtAlert = parseFloat(document.getElementById("outAmtAlert").value);
+            
+            async function runQuery() {
+                console.log("开始反向查询", new Date().toLocaleTimeString());
+                try {
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: blue;">正在反向查询...</span>';
+                    
+                    // 获取原始参数但不修改UI
+                    const fromTokenAddress = document.getElementById("fromTokenAddress").value;
+                    const toTokenAddress = document.getElementById("toTokenAddress").value;
+                    const originalAmount = document.getElementById("amount").value;
+                    
+                    // 准备API调用参数 - 直接在API调用参数中进行交换，而不修改UI
+                    const apiKey = document.getElementById("apiKey").value;
+                    const secretKey = document.getElementById("secretKey").value;
+                    const passphrase = document.getElementById("passphrase").value;
+                    const chainIndex = document.getElementById("chainIndex").value;
+                    
+                    // 构建查询参数 - 这里交换fromTokenAddress和toTokenAddress
+                    const queryParams = {
+                        chainIndex: chainIndex,
+                        fromTokenAddress: toTokenAddress, // 反向：原目标代币作为源
+                        toTokenAddress: fromTokenAddress, // 反向：原源代币作为目标
+                        amount: formatToWei(document.getElementById("outAmtAlert").value) // 使用阈值作为输入量
+                    };
+                    
+                    const queryString = Object.entries(queryParams)
+                        .map(([k, v]) => `${k}=${v}`)
+                        .join("&");
+                        
+                    const requestPath = `/api/v5/dex/aggregator/quote?${queryString}`;
+                    
+                    // 生成时间戳
+                    const now = new Date();
+                    const timestamp = now.toISOString().slice(0, -1) + "Z";
+                    
+                    // 生成签名
+                    const signature = await generateSignature(timestamp, "GET", requestPath, "", secretKey);
+                    
+                    // 直接访问API
+                    const baseUrl = "https://web3.okx.com/api/v5/dex/aggregator/quote";
+                    
+                    // 发送API请求
+                    const response = await fetch(`${baseUrl}?${queryString}`, {
+                        method: "GET",
+                        headers: {
+                            "OK-ACCESS-KEY": apiKey,
+                            "OK-ACCESS-SIGN": signature,
+                            "OK-ACCESS-PASSPHRASE": passphrase,
+                            "OK-ACCESS-TIMESTAMP": timestamp,
+                            "Content-Type": "application/json"
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`反向查询HTTP错误: ${response.status}`);
+                    }
+                    
+                    const responseData = await response.json();
+                    console.log("反向API返回", responseData);
+                    
+                    // 提取数据
+                    const extractedData = extractAmountOutAndDexName(responseData);
+                    
+                    // 当前时间
+                    const currentTime = new Date().toLocaleString();
+                    document.getElementById("queryTime").textContent = `反向查询时间: ${currentTime}`;
+                    
+                    if (!extractedData.error) {
+                        // 直接使用结果
+                        const maxResult = extractedData;
+                        
+                        if (maxResult) {
+                            // 更新最大输出量显示
+                            document.getElementById('maxAmountOut').textContent = maxResult.amountOut;
+                            document.getElementById('maxDexName').textContent = maxResult.dexName + " (反向)";
+                            
+                            // 更新图表
+                            const shortTime = new Date().toLocaleTimeString();
+                            updateChart(shortTime, parseFloat(maxResult.amountOut));
+                            
+                            // 检查是否超过阈值
+                            const maxAmountValue = parseFloat(maxResult.amountOut);
+                            const originalInputAmount = parseFloat(originalAmount);
+                            
+                            if (maxAmountValue > originalInputAmount) {
+                                document.getElementById("alertMessage").textContent = "反向价格有利可图!";
+                                document.getElementById('statusInfo').innerHTML = '<span style="color: purple;">反向价格有利!</span>';
+                                
+                                // 发送Telegram通知
+                                sendTelegramNotification(`反向价格有利可图：${maxResult.amountOut} (使用 ${toTokenAddress} 换取 ${fromTokenAddress})`);
+                                
+                                if (document.getElementById("isBreak").checked) {
+                                    stopQuery();
+                                    return;
+                                }
+                            } else {
+                                document.getElementById("alertMessage").textContent = "";
+                                document.getElementById('statusInfo').innerHTML = '<span style="color: green;">正常监控中 (反向)</span>';
+                            }
+                        }
+                    } else {
+                        // 显示错误信息
+                        document.getElementById('statusInfo').innerHTML = '<span style="color: red;">获取反向数据失败</span>';
+                        document.getElementById("alertMessage").textContent = extractedData.error || "获取数据失败";
+                        
+                        // 显示CORS错误的额外提示
+                        if (extractedData.note) {
+                            document.getElementById("alertMessage").textContent += "\n" + extractedData.note;
+                        }
+                    }
+                } catch (error) {
+                    console.error("反向查询错误:", error);
+                    document.getElementById('statusInfo').innerHTML = '<span style="color: red;">发生错误</span>';
+                    document.getElementById("alertMessage").textContent = `发生错误: ${error.message}`;
+                }
+            }
+            
+            // 立即执行一次
+            runQuery();
+            
+            // 设置定时器
+            queryInterval = setInterval(async () => {
+                // 检查当前模式
+                if (currentQueryMode === 'reverse') {
+                    await runQuery();
+                } else {
+                    console.log("模式已更改，停止反向查询");
+                    clearInterval(queryInterval);
+                    queryInterval = null;
+                }
+            }, queryIntervalValue * 1000);
+        }
+    </script>
+</body>
+</html> 
