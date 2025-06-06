@@ -675,6 +675,16 @@
             priceChart.update();
             document.getElementById('maxAmountOut').textContent = '-';
             document.getElementById('maxDexName').textContent = '-';
+            updateTitle('-');
+        }
+
+        // 更新浏览器标题以显示最大输出量
+        function updateTitle(maxAmountOut) {
+            if (maxAmountOut === '-' || maxAmountOut === '') {
+                document.title = 'OKX DEX询价工具 - 图表版';
+            } else {
+                document.title = `OKX DEX询价工具 - 最大输出: ${maxAmountOut}`;
+            }
         }
         
         // 发送Telegram通知
@@ -900,6 +910,7 @@ function findMaxAmountOut(result) {
             document.getElementById("calculateSlippageBtn").disabled = false;
             document.getElementById("stopBtn").disabled = true;
             document.getElementById('statusInfo').innerHTML = '<span style="color: gray;">已停止</span>';
+            updateTitle('-'); // 重置标题为默认值
             currentQueryMode = null;
         }
         
@@ -1019,6 +1030,7 @@ function findMaxAmountOut(result) {
                     // 更新显示
                     document.getElementById('maxAmountOut').textContent = buyAmount;
                     document.getElementById('maxDexName').textContent = buyDex;
+                    updateTitle(buyAmount);
                     
                     // 等待2秒
                     const waitTime = 2000;
@@ -1089,6 +1101,7 @@ function findMaxAmountOut(result) {
                     document.getElementById("queryTime").textContent = `磨损计算时间: ${currentTime}`;
                     document.getElementById('maxAmountOut').textContent = slippage.toFixed(8);
                     document.getElementById('maxDexName').textContent = `磨损率: ${slippagePercentage.toFixed(4)}%`;
+                    updateTitle(`磨损: ${slippage.toFixed(8)}`);
                     
                     // 更新图表
                     const shortTime = new Date().toLocaleTimeString();
@@ -1157,6 +1170,7 @@ function findMaxAmountOut(result) {
                             // 更新最大输出量显示
                             document.getElementById('maxAmountOut').textContent = maxResult.amountOut;
                             document.getElementById('maxDexName').textContent = maxResult.dexName;
+                            updateTitle(maxResult.amountOut);
                             
                             // 更新图表
                             const shortTime = new Date().toLocaleTimeString();
@@ -1244,6 +1258,7 @@ function findMaxAmountOut(result) {
                             // 更新最大输出量显示
                             document.getElementById('maxAmountOut').textContent = maxResult.amountOut;
                             document.getElementById('maxDexName').textContent = maxResult.dexName;
+                            updateTitle(maxResult.amountOut);
                             
                             // 更新图表
                             const shortTime = new Date().toLocaleTimeString();
@@ -1382,6 +1397,7 @@ function findMaxAmountOut(result) {
                             // 更新最大输出量显示
                             document.getElementById('maxAmountOut').textContent = maxResult.amountOut;
                             document.getElementById('maxDexName').textContent = maxResult.dexName + " (反向)";
+                            updateTitle(maxResult.amountOut);
                             
                             // 更新图表
                             const shortTime = new Date().toLocaleTimeString();
