@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>CSV 交易周报分析器 (v2)</title>
+    <title>CSV 交易周报分析器 (v3)</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -14,7 +14,7 @@
             color: #1a1a1a;
         }
         #container {
-            max-width: 1000px; /* 稍微加宽以容纳新列 */
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
             background-color: #fff;
@@ -25,7 +25,7 @@
             display: flex;
             align-items: center;
             gap: 15px; /* 控件之间的间距 */
-            flex-wrap: wrap; /* 换行 */
+            flex-wrap: wrap; /* 自动换行 */
         }
         input[type="file"] {
             margin-bottom: 0;
@@ -47,10 +47,20 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            transition: background-color 0.2s;
         }
         button:hover {
             background-color: #0056b3;
         }
+
+        /* 新增：推特按钮的次要样式 */
+        button.secondary {
+            background-color: #6c757d; /* 灰色 */
+        }
+        button.secondary:hover {
+            background-color: #5a6268;
+        }
+
         #status {
             margin-top: 15px;
             font-size: 1.1em;
@@ -73,7 +83,6 @@
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        /* 右对齐数字列 */
         td:nth-child(2), td:nth-child(3), td:nth-child(4) {
             text-align: right;
             font-family: "Courier New", Courier, monospace;
@@ -84,7 +93,7 @@
 
     <div id="container">
         <h1>backpack 交易周报分析 (纯前端，不会上传数据)</h1>
-        <p>请上传您的交易 CSV 文件。周期从 2025-09-12 开始计算。文件从pc端:资产总览-交易-成交记录-导出</p>
+        <p>请上传您的交易 CSV 文件。文件从pc端:资产总览-交易-成交记录-导出</p>
 
         <div class="controls">
             <div>
@@ -98,6 +107,10 @@
             </div>
 
             <button onclick="handleFile()">开始分析</button>
+
+            <button class="secondary" onclick="window.open('https://x.com/allen4187/status/1984153221032767917', '_blank', 'noopener,noreferrer')">
+                𝕏
+            </button>
         </div>
 
         <div id="status">请选择文件并点击“开始分析”。</div>
@@ -111,7 +124,7 @@
          */
         function handleFile() {
             const fileInput = document.getElementById('csvFileInput');
-            const rebateInput = document.getElementById('rebatePercentage'); // 获取新输入框
+            const rebateInput = document.getElementById('rebatePercentage');
             const statusDiv = document.getElementById('status');
             const resultsDiv = document.getElementById('resultsTable');
 
@@ -121,7 +134,6 @@
                 return;
             }
 
-            // 验证返点比例
             let rebatePercentage = parseFloat(rebateInput.value);
             if (isNaN(rebatePercentage) || rebatePercentage < 0 || rebatePercentage > 100) {
                 statusDiv.textContent = "错误：返点比例请输入 0 到 100 之间的数字。";
@@ -129,23 +141,20 @@
                 return;
             }
 
-            // 将百分比转换为小数 (例如 35% -> 0.35)
             const rebateDecimal = rebatePercentage / 100.0;
 
             const file = fileInput.files[0];
             statusDiv.textContent = `正在处理文件: ${file.name}...`;
             statusDiv.style.color = 'blue';
-            resultsDiv.innerHTML = ""; // 清空旧结果
+            resultsDiv.innerHTML = "";
 
             const reader = new FileReader();
 
-            // 文件读取完成后的回调
             reader.onload = function(event) {
                 try {
                     const csvData = event.target.result;
-                    // 将返点比例传递给处理函数
                     const results = processCSV(csvData, rebateDecimal);
-                    displayResults(results); // 传递给显示函数
+                    displayResults(results);
                     statusDiv.textContent = "分析完成！";
                     statusDiv.style.color = 'green';
                 } catch (error) {
@@ -155,29 +164,24 @@
                 }
             };
 
-            // 文件读取失败的回调
             reader.onerror = function() {
                 statusDiv.textContent = "错误：无法读取文件。";
                 statusDiv.style.color = 'red';
             };
 
-            // 以文本形式读取文件
             reader.readAsText(file);
         }
 
         /**
-         * 核心处理逻辑，解析CSV并统计
-         * @param {string} csvData - CSV文件的文本内容
-         * @param {number} rebateDecimal - 返点比例 (例如 0.35)
+         * 核心处理逻辑
          */
         function processCSV(csvData, rebateDecimal) {
-            const lines = csvData.split(/\r?\n/); // 按行分割
+            const lines = csvData.split(/\r?\n/);
 
             if (lines.length < 2) {
                 throw new Error("文件为空或没有数据行。");
             }
 
-            // 1. 解析表头
             const header = lines[0].split(',');
             const colIndices = {
                 timestamp: header.indexOf('timestamp'),
@@ -186,53 +190,46 @@
                 quantity: header.indexOf('quantity')
             };
 
-            // 检查必需的列
             for (const col of ['timestamp', 'fee', 'price', 'quantity']) {
                 if (colIndices[col] === -1) {
                     throw new Error(`CSV文件中缺少必需的列: '${col}'`);
                 }
             }
 
-            // 2. 定义周期
-            // 优化 1: 开始日期从 2025-09-12 开始
-            // (0 = 1月, 8 = 9月)
-            const startDate = new Date(Date.UTC(2025, 8, 12)); // 2025-09-12
+            // 开始日期: 2025-09-12
+            const startDate = new Date(Date.UTC(2025, 8, 12)); // 8 = 9月
             const msPerDay = 1000 * 60 * 60 * 24;
 
-            // 3. 遍历数据行
             const weeklyStats = new Map();
 
             for (let i = 1; i < lines.length; i++) {
                 const line = lines[i];
-                if (!line.trim()) continue; // 跳过空行
+                if (!line.trim()) continue;
 
                 const row = line.split(',');
                 if (row.length < header.length) continue;
 
-                // 4. 按要求处理日期
                 const timestampStr = row[colIndices.timestamp];
-                if (!timestampStr || timestampStr.length < 10) continue; // 跳过无效时间戳
-                const dateStr = timestampStr.substring(0, 10); // 截取 'YYYY-MM-DD'
+                if (!timestampStr || timestampStr.length < 10) continue;
+                const dateStr = timestampStr.substring(0, 10);
 
                 const parts = dateStr.split('-');
                 if (parts.length < 3) continue;
 
                 const year = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; // JS 月份从0开始
+                const month = parseInt(parts[1], 10) - 1;
                 const day = parseInt(parts[2], 10);
 
                 const dateOnly = new Date(Date.UTC(year, month, day));
 
-                // 5. 过滤并计算周期
                 if (dateOnly < startDate) {
-                    continue; // 忽略早于起始日期的数据
+                    continue;
                 }
 
                 const timeDiff = dateOnly.getTime() - startDate.getTime();
                 const daysDiff = Math.floor(timeDiff / msPerDay);
                 const weekNumber = Math.floor(daysDiff / 7) + 1;
 
-                // 6. 创建周期标签
                 const weekStartDate = new Date(startDate.getTime());
                 weekStartDate.setUTCDate(weekStartDate.getUTCDate() + (weekNumber - 1) * 7);
                 const weekEndDate = new Date(weekStartDate.getTime());
@@ -240,22 +237,20 @@
 
                 const periodStr = `第 ${weekNumber} 周 ${formatDate(weekStartDate)} - ${formatDate(weekEndDate, true)}`;
 
-                // 7. 解析数值并计算
                 const fee = parseFloat(row[colIndices.fee]);
                 const price = parseFloat(row[colIndices.price]);
                 const quantity = parseFloat(row[colIndices.quantity]);
 
                 if (isNaN(fee) || isNaN(price) || isNaN(quantity)) {
-                    continue; // 跳过无效数值
+                    continue;
                 }
                 const tradeVolume = price * quantity;
 
-                // 8. 累加统计
                 if (!weeklyStats.has(periodStr)) {
                     weeklyStats.set(periodStr, {
                         total_fee: 0,
                         total_volume: 0,
-                        week_number: weekNumber // 用于排序
+                        week_number: weekNumber
                     });
                 }
                 const stats = weeklyStats.get(periodStr);
@@ -263,13 +258,12 @@
                 stats.total_volume += tradeVolume;
             }
 
-            // 9. 计算返点金额 (优化 3)
-            // 在排序前，遍历 Map 并计算新列
+            // 计算返点
             for (const [periodStr, stats] of weeklyStats.entries()) {
                 stats.rebate_amount = stats.total_fee * rebateDecimal;
             }
 
-            // 10. 排序
+            // 排序
             const sortedResults = Array.from(weeklyStats.entries());
             sortedResults.sort((a, b) => a[1].week_number - b[1].week_number);
 
@@ -277,8 +271,7 @@
         }
 
         /**
-         * 将结果显示为 HTML 表格
-         * @param {Array} sortedResults - 排序后的统计结果
+         * 显示结果
          */
         function displayResults(sortedResults) {
             const resultsDiv = document.getElementById('resultsTable');
@@ -288,12 +281,10 @@
             }
 
             let tableHTML = '<table>';
-            // 优化 3: 新增表头
             tableHTML += '<thead><tr><th>Week Period</th><th>Total Fee</th><th>Total Volume</th><th>返点金额 (Rebate)</th></tr></thead>';
             tableHTML += '<tbody>';
 
             for (const [period, stats] of sortedResults) {
-                // 优化 3: 新增数据列
                 tableHTML += `
                     <tr>
                         <td>${period}</td>
