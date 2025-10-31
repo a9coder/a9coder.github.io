@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>CSV 交易周报分析器</title>
+    <title>CSV 交易周报分析器 (v2)</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -14,15 +14,30 @@
             color: #1a1a1a;
         }
         #container {
-            max-width: 900px;
+            max-width: 1000px; /* 稍微加宽以容纳新列 */
             margin: 0 auto;
             padding: 20px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
         }
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 15px; /* 控件之间的间距 */
+            flex-wrap: wrap; /* 换行 */
+        }
         input[type="file"] {
-            margin-bottom: 10px;
+            margin-bottom: 0;
+        }
+        input[type="number"] {
+            width: 60px;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        label {
+            font-weight: bold;
         }
         button {
             padding: 10px 15px;
@@ -58,7 +73,8 @@
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        td:nth-child(2), td:nth-child(3) {
+        /* 右对齐数字列 */
+        td:nth-child(2), td:nth-child(3), td:nth-child(4) {
             text-align: right;
             font-family: "Courier New", Courier, monospace;
         }
@@ -67,15 +83,25 @@
 <body>
 
     <div id="container">
-        <h1>CSV 交易周报分析器</h1>
-        <p>请上传您的 `20251023_Main_trades.csv` 或格式相同的文件。</p>
-        
-        <input type="file" id="csvFileInput" accept=".csv">
-        
-        <button onclick="handleFile()">开始分析</button>
-        
+        <h1>backpack 交易周报分析 (纯前端，不会上传数据)</h1>
+        <p>请上传您的交易 CSV 文件。周期从 2025-09-12 开始计算。文件从pc端:资产总览-交易-成交记录-导出</p>
+
+        <div class="controls">
+            <div>
+                <input type="file" id="csvFileInput" accept=".csv">
+            </div>
+
+            <div>
+                <label for="rebatePercentage">返点比例:</label>
+                <input type="number" id="rebatePercentage" value="35" min="0" max="100">
+                <span>%</span>
+            </div>
+
+            <button onclick="handleFile()">开始分析</button>
+        </div>
+
         <div id="status">请选择文件并点击“开始分析”。</div>
-        
+
         <div id="resultsTable"></div>
     </div>
 
@@ -85,6 +111,7 @@
          */
         function handleFile() {
             const fileInput = document.getElementById('csvFileInput');
+            const rebateInput = document.getElementById('rebatePercentage'); // 获取新输入框
             const statusDiv = document.getElementById('status');
             const resultsDiv = document.getElementById('resultsTable');
 
@@ -93,6 +120,17 @@
                 statusDiv.style.color = 'red';
                 return;
             }
+
+            // 验证返点比例
+            let rebatePercentage = parseFloat(rebateInput.value);
+            if (isNaN(rebatePercentage) || rebatePercentage < 0 || rebatePercentage > 100) {
+                statusDiv.textContent = "错误：返点比例请输入 0 到 100 之间的数字。";
+                statusDiv.style.color = 'red';
+                return;
+            }
+
+            // 将百分比转换为小数 (例如 35% -> 0.35)
+            const rebateDecimal = rebatePercentage / 100.0;
 
             const file = fileInput.files[0];
             statusDiv.textContent = `正在处理文件: ${file.name}...`;
@@ -105,8 +143,9 @@
             reader.onload = function(event) {
                 try {
                     const csvData = event.target.result;
-                    const results = processCSV(csvData);
-                    displayResults(results);
+                    // 将返点比例传递给处理函数
+                    const results = processCSV(csvData, rebateDecimal);
+                    displayResults(results); // 传递给显示函数
                     statusDiv.textContent = "分析完成！";
                     statusDiv.style.color = 'green';
                 } catch (error) {
@@ -129,10 +168,11 @@
         /**
          * 核心处理逻辑，解析CSV并统计
          * @param {string} csvData - CSV文件的文本内容
+         * @param {number} rebateDecimal - 返点比例 (例如 0.35)
          */
-        function processCSV(csvData) {
+        function processCSV(csvData, rebateDecimal) {
             const lines = csvData.split(/\r?\n/); // 按行分割
-            
+
             if (lines.length < 2) {
                 throw new Error("文件为空或没有数据行。");
             }
@@ -154,8 +194,9 @@
             }
 
             // 2. 定义周期
-            // 使用 Date.UTC 确保时区一致性 (0 = 1月, 8 = 9月)
-            const startDate = new Date(Date.UTC(2025, 8, 12)); // 2025-09-11
+            // 优化 1: 开始日期从 2025-09-12 开始
+            // (0 = 1月, 8 = 9月)
+            const startDate = new Date(Date.UTC(2025, 8, 12)); // 2025-09-12
             const msPerDay = 1000 * 60 * 60 * 24;
 
             // 3. 遍历数据行
@@ -166,24 +207,20 @@
                 if (!line.trim()) continue; // 跳过空行
 
                 const row = line.split(',');
-                
-                // 确保行数据完整
                 if (row.length < header.length) continue;
 
                 // 4. 按要求处理日期
                 const timestampStr = row[colIndices.timestamp];
                 if (!timestampStr || timestampStr.length < 10) continue; // 跳过无效时间戳
-
                 const dateStr = timestampStr.substring(0, 10); // 截取 'YYYY-MM-DD'
-                
-                // 将 'YYYY-MM-DD' 字符串转为 UTC 日期对象
+
                 const parts = dateStr.split('-');
                 if (parts.length < 3) continue;
-                
+
                 const year = parseInt(parts[0], 10);
                 const month = parseInt(parts[1], 10) - 1; // JS 月份从0开始
                 const day = parseInt(parts[2], 10);
-                
+
                 const dateOnly = new Date(Date.UTC(year, month, day));
 
                 // 5. 过滤并计算周期
@@ -198,10 +235,9 @@
                 // 6. 创建周期标签
                 const weekStartDate = new Date(startDate.getTime());
                 weekStartDate.setUTCDate(weekStartDate.getUTCDate() + (weekNumber - 1) * 7);
-
                 const weekEndDate = new Date(weekStartDate.getTime());
                 weekEndDate.setUTCDate(weekEndDate.getUTCDate() + 6);
-                
+
                 const periodStr = `第 ${weekNumber} 周 ${formatDate(weekStartDate)} - ${formatDate(weekEndDate, true)}`;
 
                 // 7. 解析数值并计算
@@ -212,7 +248,6 @@
                 if (isNaN(fee) || isNaN(price) || isNaN(quantity)) {
                     continue; // 跳过无效数值
                 }
-
                 const tradeVolume = price * quantity;
 
                 // 8. 累加统计
@@ -223,13 +258,18 @@
                         week_number: weekNumber // 用于排序
                     });
                 }
-
                 const stats = weeklyStats.get(periodStr);
                 stats.total_fee += fee;
                 stats.total_volume += tradeVolume;
             }
 
-            // 9. 排序
+            // 9. 计算返点金额 (优化 3)
+            // 在排序前，遍历 Map 并计算新列
+            for (const [periodStr, stats] of weeklyStats.entries()) {
+                stats.rebate_amount = stats.total_fee * rebateDecimal;
+            }
+
+            // 10. 排序
             const sortedResults = Array.from(weeklyStats.entries());
             sortedResults.sort((a, b) => a[1].week_number - b[1].week_number);
 
@@ -248,15 +288,18 @@
             }
 
             let tableHTML = '<table>';
-            tableHTML += '<thead><tr><th>Week Period</th><th>Total Fee</th><th>Total Volume</th></tr></thead>';
+            // 优化 3: 新增表头
+            tableHTML += '<thead><tr><th>Week Period</th><th>Total Fee</th><th>Total Volume</th><th>返点金额 (Rebate)</th></tr></thead>';
             tableHTML += '<tbody>';
 
             for (const [period, stats] of sortedResults) {
+                // 优化 3: 新增数据列
                 tableHTML += `
                     <tr>
                         <td>${period}</td>
                         <td>${stats.total_fee.toFixed(8)}</td>
                         <td>${stats.total_volume.toFixed(8)}</td>
+                        <td>${stats.rebate_amount.toFixed(8)}</td>
                     </tr>
                 `;
             }
@@ -266,22 +309,17 @@
         }
 
         /**
-         * 辅助函数：格式化日期为 'September 11' 或 'September 17, 2025'
-         * @param {Date} date - 日期对象
-         * @param {boolean} includeYear - 是否包含年份
+         * 辅助函数：格式化日期
          */
         function formatDate(date, includeYear = false) {
-            // 使用 en-US locale 来匹配 "September 11" 格式
             const options = {
                 month: 'long',
                 day: 'numeric',
                 timeZone: 'UTC'
             };
-
             if (includeYear) {
                 options.year = 'numeric';
             }
-            
             return date.toLocaleDateString('en-US', options);
         }
 
